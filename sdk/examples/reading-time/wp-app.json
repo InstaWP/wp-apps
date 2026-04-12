@@ -1,0 +1,59 @@
+{
+    "$schema": "https://wp-apps.org/schema/v1/manifest.json",
+    "spec_version": "0.1.0",
+
+    "app": {
+        "id": "com.wpapps.reading-time",
+        "name": "Reading Time",
+        "version": "1.0.0",
+        "description": "Calculates and displays reading time for posts. Zero runtime cost.",
+        "author": {
+            "name": "WP Apps Team",
+            "url": "https://wp-apps.org"
+        },
+        "license": "MIT"
+    },
+
+    "runtime": {
+        "endpoint": "https://reading-time-app.nbg1-2.instapods.app",
+        "health_check": "/health",
+        "auth_callback": "/auth/callback",
+        "webhook_path": "/hooks",
+        "timeout_ms": 5000
+    },
+
+    "permissions": {
+        "scopes": [
+            "posts:read",
+            "postmeta:read",
+            "postmeta:write"
+        ]
+    },
+
+    "hooks": {
+        "events": [
+            {
+                "event": "save_post",
+                "description": "Calculate reading time and word count, write to post meta"
+            }
+        ]
+    },
+
+    "postmeta": {
+        "reading_time": "Reading time in minutes",
+        "word_count": "Total word count"
+    },
+
+    "surfaces": {
+        "blocks": [
+            {
+                "name": "wpapps/reading-time",
+                "title": "Reading Time",
+                "category": "widgets",
+                "description": "Displays estimated reading time for the current post",
+                "icon": "clock",
+                "cache_ttl": 86400
+            }
+        ]
+    }
+}
