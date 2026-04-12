@@ -1,0 +1,70 @@
+{
+    "$schema": "https://wp-apps.org/schema/v1/manifest.json",
+    "spec_version": "0.1.0",
+
+    "app": {
+        "id": "com.wpapps.contact-form",
+        "name": "WP Apps Contact Form",
+        "version": "1.0.0",
+        "description": "A simple contact form that stores submissions and sends email notifications.",
+        "author": {
+            "name": "WP Apps Team",
+            "url": "https://wp-apps.org"
+        },
+        "license": "MIT",
+        "categories": ["forms", "contact"],
+        "tags": ["contact-form", "email", "submissions"]
+    },
+
+    "runtime": {
+        "endpoint": "https://contact-form-app.nbg1-2.instapods.app",
+        "health_check": "/health",
+        "auth_callback": "/auth/callback",
+        "webhook_path": "/hooks",
+        "timeout_ms": 5000
+    },
+
+    "requires": {
+        "wp_version": ">=6.5",
+        "php_version": ">=8.1",
+        "apps_runtime_version": ">=0.1.0"
+    },
+
+    "permissions": {
+        "scopes": [
+            "posts:read",
+            "site:read"
+        ]
+    },
+
+    "surfaces": {
+        "blocks": [
+            {
+                "name": "wpapps/contact-form",
+                "title": "Contact Form",
+                "category": "widgets",
+                "description": "A contact form powered by WP Apps",
+                "cache_ttl": 86400
+            }
+        ],
+        "admin_pages": [
+            {
+                "slug": "contact-submissions",
+                "title": "Contact Submissions",
+                "menu_location": "tools",
+                "icon": "dashicons-email",
+                "capability": "manage_options",
+                "render_mode": "iframe"
+            }
+        ]
+    },
+
+    "privacy": {
+        "data_collected": [
+            {"type": "name", "purpose": "Form submission identification", "retention": "90d"},
+            {"type": "email", "purpose": "Reply to contact form", "retention": "90d"},
+            {"type": "ip_address", "purpose": "Spam prevention", "retention": "30d"}
+        ],
+        "data_shared_with": ["No third parties"]
+    }
+}

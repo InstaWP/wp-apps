@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WP Apps — Sandboxed Extensions for WordPress</title>
+    <style>
+        /* ── RESET & BASE ────────────────────────────────── */
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #080808;
+            --bg-surface: #0e0e0e;
+            --bg-raised: #141414;
+            --bg-inset: #0a0a0a;
+            --border: #1e1e1e;
+            --border-strong: #2a2a2a;
+            --text: #c8c8c8;
+            --text-dim: #666;
+            --text-bright: #eaeaea;
+            --white: #f5f5f5;
+            --red: #ff3333;
+            --red-dim: #661a1a;
+            --red-glow: rgba(255, 51, 51, 0.15);
+            --green: #00ff88;
+            --green-dim: #003d20;
+            --green-glow: rgba(0, 255, 136, 0.1);
+            --mono: 'Menlo', 'Consolas', 'SF Mono', 'Liberation Mono', monospace;
+            --serif: 'Georgia', 'Times New Roman', 'Palatino Linotype', serif;
+            --sans: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.65;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── NOISE OVERLAY ───────────────────────────────── */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 256px 256px;
+        }
+
+        /* ── SCROLL REVEAL ───────────────────────────────── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── NAV ─────────────────────────────────────────── */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            padding: 0 clamp(1.5rem, 4vw, 4rem);
+            height: 56px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(8, 8, 8, 0.9);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-logo {
+            font-family: var(--mono);
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--white);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+
+        .nav-logo .wp { color: var(--green); }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 1.75rem;
+            list-style: none;
+        }
+
+        .nav-links a {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            transition: color 0.2s;
+        }
+
+        .nav-links a:hover { color: var(--white); }
+
+        .nav-spec {
+            padding: 0.4rem 1rem;
+            border: 1px solid var(--border-strong);
+            color: var(--text) !important;
+            transition: all 0.2s;
+        }
+
+        .nav-spec:hover {
+            border-color: var(--green);
+            color: var(--green) !important;
+        }
+
+        /* ── HERO ────────────────────────────────────────── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: clamp(7rem, 15vh, 10rem) clamp(2rem, 5vw, 6rem) 4rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .hero-version {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .hero-version::before {
+            content: '';
+            width: 32px;
+            height: 1px;
+            background: var(--border-strong);
+        }
+
+        .hero h1 {
+            font-family: var(--serif);
+            font-size: clamp(3.5rem, 9vw, 7.5rem);
+            font-weight: 400;
+            color: var(--white);
+            line-height: 1.05;
+            letter-spacing: -0.035em;
+            margin-bottom: 2.5rem;
+            max-width: 100%;
+        }
+
+        .hero h1 em {
+            font-style: italic;
+            color: var(--red);
+            position: relative;
+        }
+
+        .hero h1 .fix {
+            color: var(--green);
+            font-style: italic;
+        }
+
+        .hero-sub {
+            font-size: clamp(1.05rem, 1.5vw, 1.25rem);
+            color: var(--text-dim);
+            max-width: 750px;
+            margin-bottom: 3rem;
+            line-height: 1.7;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.85rem 1.75rem;
+            text-decoration: none;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-green {
+            background: var(--green);
+            color: #000;
+        }
+        .btn-green:hover {
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border-strong);
+        }
+        .btn-ghost:hover {
+            border-color: var(--text);
+            color: var(--white);
+        }
+
+        /* ── ARCHITECTURE DIAGRAM ────────────────────────── */
+        .arch {
+            margin-top: 5rem;
+            max-width: 820px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        .arch-wp {
+            width: 100%;
+            border: 1px solid var(--border-strong);
+            background: var(--bg-surface);
+            padding: 2rem 2.5rem 2rem;
+            position: relative;
+        }
+
+        .arch-wp-label {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-dim);
+            margin-bottom: 1.5rem;
+        }
+
+        .arch-wp-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1px;
+            background: var(--border);
+        }
+
+        .arch-col {
+            background: var(--bg);
+            padding: 1.25rem 1.5rem;
+        }
+
+        .arch-col-title {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            margin-bottom: 0.75rem;
+        }
+
+        .arch-item {
+            font-family: var(--mono);
+            font-size: 0.8rem;
+            padding: 0.35rem 0;
+            color: var(--text);
+        }
+
+        .arch-item.bright { color: var(--green); }
+        .arch-item.warn   { color: #e5a00d; }
+
+        /* Connection pipe */
+        .arch-pipe {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem 0;
+            position: relative;
+        }
+
+        .arch-pipe-line {
+            width: 1px;
+            height: 20px;
+            background: var(--border-strong);
+        }
+
+        .arch-pipe-label {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            letter-spacing: 0.06em;
+            padding: 0.5rem 1.25rem;
+            border: 1px solid var(--red-dim);
+            background: var(--red-glow);
+            color: var(--red);
+            text-transform: uppercase;
+        }
+
+        /* App nodes */
+        .arch-apps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            background: var(--border);
+            width: 100%;
+        }
+
+        .arch-app {
+            background: var(--bg);
+            padding: 1.25rem 1.5rem;
+            text-align: center;
+        }
+
+        .arch-app-name {
+            font-family: var(--mono);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--green);
+            margin-bottom: 0.2rem;
+        }
+
+        .arch-app-env {
+            font-family: var(--mono);
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .arch-app-arrow {
+            font-size: 0.75rem;
+            color: var(--border-strong);
+            margin-bottom: 0.35rem;
+        }
+
+        /* ── THICK DIVIDER ───────────────────────────────── */
+        .divider {
+            border: none;
+            border-top: 3px solid var(--border);
+            margin: 0;
+        }
+
+        /* ── SECTION LAYOUT ──────────────────────────────── */
+        .sect {
+            padding: clamp(4rem, 10vw, 8rem) clamp(1.5rem, 4vw, 4rem);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .sect-num {
+            font-family: var(--serif);
+            font-size: clamp(3rem, 6vw, 5rem);
+            font-weight: 400;
+            color: var(--border-strong);
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .sect-label {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        .sect-title {
+            font-family: var(--serif);
+            font-size: clamp(1.75rem, 4vw, 2.75rem);
+            font-weight: 400;
+            color: var(--white);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            margin-bottom: 1.25rem;
+            max-width: 700px;
+        }
+
+        .sect-desc {
+            color: var(--text-dim);
+            max-width: 560px;
+            margin-bottom: 3.5rem;
+            font-size: 1rem;
+        }
+
+        /* ── PROBLEM: ACCESS AUDIT ───────────────────────── */
+        .problem-full {
+            padding: clamp(4rem, 10vw, 8rem) 0;
+            border-top: 3px solid var(--border);
+            border-bottom: 3px solid var(--border);
+            background: var(--bg-surface);
+        }
+
+        .problem-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 clamp(1.5rem, 4vw, 4rem);
+        }
+
+        .audit-panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2px;
+            background: var(--border);
+            margin-top: 3rem;
+        }
+
+        .audit-panel {
+            background: var(--bg);
+            padding: clamp(1.25rem, 3vw, 2rem);
+        }
+
+        .audit-header {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            padding-bottom: 1rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .audit-header .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+
+        .audit-header.danger { color: var(--red); }
+        .audit-header.danger .status-dot {
+            background: var(--red);
+            box-shadow: 0 0 8px var(--red);
+            animation: pulse-red 2s infinite;
+        }
+
+        .audit-header.safe { color: var(--green); }
+        .audit-header.safe .status-dot {
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--red); }
+            50% { opacity: 0.5; box-shadow: 0 0 16px var(--red); }
+        }
+
+        .audit-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-family: var(--mono);
+            font-size: 0.78rem;
+        }
+
+        .audit-resource {
+            color: var(--text);
+        }
+
+        .audit-badge {
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 0.2rem 0.6rem;
+            font-weight: 600;
+        }
+
+        .badge-full {
+            color: var(--red);
+            background: var(--red-glow);
+            border: 1px solid var(--red-dim);
+        }
+
+        .badge-scoped {
+            color: var(--green);
+            background: var(--green-glow);
+            border: 1px solid var(--green-dim);
+        }
+
+        .badge-denied {
+            color: var(--text-dim);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+        }
+
+        .audit-verdict {
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .verdict-danger {
+            color: var(--red);
+        }
+
+        .verdict-safe {
+            color: var(--green);
+        }
+
+        .problem-callout {
+            margin-top: 3rem;
+            font-family: var(--serif);
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            font-style: italic;
+            color: var(--text-dim);
+            max-width: 700px;
+            line-height: 1.6;
+            padding-left: 1.5rem;
+            border-left: 3px solid var(--red-dim);
+        }
+
+        .problem-callout strong {
+            color: var(--red);
+            font-weight: 400;
+        }
+
+        /* ── HOW IT WORKS ────────────────────────────────── */
+        .steps {
+            counter-reset: step;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .step {
+            counter-increment: step;
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            padding: 2rem 0;
+        }
+
+        .step:first-child {
+            border-top: 1px solid var(--border);
+        }
+
+        .step-num {
+            font-family: var(--serif);
+            font-size: 2rem;
+            color: var(--border-strong);
+            padding-top: 0.1rem;
+        }
+
+        .step-num::before {
+            content: counter(step, decimal-leading-zero);
+        }
+
+        .step-content h3 {
+            font-family: var(--serif);
+            font-size: 1.15rem;
+            font-weight: 400;
+            color: var(--white);
+            margin-bottom: 0.4rem;
+        }
+
+        .step-content p {
+            color: var(--text-dim);
+            font-size: 0.92rem;
+            max-width: 520px;
+        }
+
+        .step-content code {
+            font-family: var(--mono);
+            font-size: 0.82rem;
+            color: var(--green);
+            background: var(--green-glow);
+            padding: 0.1rem 0.4rem;
+        }
+
+        /* ── FEATURES ────────────────────────────────────── */
+        .features-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+
+        .feat {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+
+        .feat:nth-child(even) {
+            border-right: none;
+        }
+
+        .feat-marker {
+            width: 10px;
+            height: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .feat-marker.m-red    { background: var(--red); }
+        .feat-marker.m-green  { background: var(--green); }
+        .feat-marker.m-amber  { background: #e5a00d; }
+        .feat-marker.m-purple { background: #a855f7; }
+        .feat-marker.m-cyan   { background: #22d3ee; }
+        .feat-marker.m-white  { background: var(--white); }
+
+        .feat h3 {
+            font-family: var(--serif);
+            font-size: 1.1rem;
+            font-weight: 400;
+            color: var(--white);
+            margin-bottom: 0.4rem;
+        }
+
+        .feat p {
+            color: var(--text-dim);
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+
+        .feat code {
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            color: var(--green);
+        }
+
+        /* ── SCOPES ──────────────────────────────────────── */
+        .scopes-bar {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .scopes-bar h4 {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--text-dim);
+            margin-bottom: 1rem;
+        }
+
+        .scopes-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .scope {
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            padding: 0.3rem 0.65rem;
+            background: var(--bg-inset);
+            border: 1px solid var(--border);
+            color: var(--text);
+            transition: all 0.2s;
+        }
+
+        .scope:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        /* ── CODE SECTION ────────────────────────────────── */
+        .code-sect {
+            background: var(--bg-surface);
+            border-top: 3px solid var(--border);
+            border-bottom: 3px solid var(--border);
+        }
+
+        .code-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0;
+        }
+
+        .code-tab {
+            font-family: var(--mono);
+            font-size: 0.75rem;
+            padding: 0.85rem 1.5rem;
+            color: var(--text-dim);
+            background: none;
+            border: none;
+            border-bottom: 2px solid transparent;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            transition: all 0.2s;
+        }
+
+        .code-tab:hover { color: var(--text); }
+
+        .code-tab.active {
+            color: var(--green);
+            border-bottom-color: var(--green);
+        }
+
+        .code-block {
+            background: var(--bg-inset);
+            border: 1px solid var(--border);
+        }
+
+        .term-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .term-dot.r { background: #ff5f57; }
+        .term-dot.y { background: #febc2e; }
+        .term-dot.g { background: #28c840; }
+
+        .code-block-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-raised);
+        }
+
+        .code-fname {
+            margin-left: 10px;
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        .code-body {
+            padding: 1.5rem;
+            font-family: var(--mono);
+            font-size: 0.78rem;
+            line-height: 1.75;
+            overflow-x: auto;
+            display: none;
+            color: var(--text);
+        }
+
+        .code-body.active { display: block; }
+
+        .code-body .k  { color: #a855f7; }
+        .code-body .s  { color: var(--green); }
+        .code-body .n  { color: #e5a00d; }
+        .code-body .c  { color: #444; font-style: italic; }
+        .code-body .f  { color: #60a5fa; }
+        .code-body .v  { color: var(--red); }
+        .code-body .ky { color: #22d3ee; }
+
+        /* ── COMPARISON TABLE ────────────────────────────── */
+        .comp-wrap {
+            border: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .comp-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.88rem;
+        }
+
+        .comp-table th {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-dim);
+            text-align: left;
+            padding: 1rem 1.5rem;
+            border-bottom: 2px solid var(--border);
+            background: var(--bg-raised);
+        }
+
+        .comp-table td {
+            padding: 0.85rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: top;
+        }
+
+        .comp-table td:first-child {
+            color: var(--text);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .comp-table .plugin-col {
+            color: var(--text-dim);
+        }
+
+        .comp-table .app-col {
+            color: var(--green);
+        }
+
+        .comp-table tbody tr:hover {
+            background: rgba(255,255,255,0.015);
+        }
+
+        /* ── SAME-SERVER CALLOUT ─────────────────────────── */
+        .sameserver {
+            margin-top: 3rem;
+            padding: 1.5rem 2rem;
+            border-left: 3px solid var(--green);
+            background: var(--green-glow);
+        }
+
+        .sameserver p {
+            font-size: 0.9rem;
+            color: var(--text);
+        }
+
+        .sameserver strong {
+            color: var(--green);
+            font-weight: 600;
+        }
+
+        /* ── CTA ─────────────────────────────────────────── */
+        .cta-sect {
+            padding: clamp(6rem, 14vw, 10rem) clamp(1.5rem, 4vw, 4rem);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .cta-sect h2 {
+            font-family: var(--serif);
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 400;
+            color: var(--white);
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin-bottom: 1.25rem;
+            max-width: 600px;
+        }
+
+        .cta-sect p {
+            color: var(--text-dim);
+            max-width: 480px;
+            margin-bottom: 2.5rem;
+            font-size: 1rem;
+        }
+
+        /* ── FOOTER ──────────────────────────────────────── */
+        footer {
+            padding: 2.5rem clamp(1.5rem, 4vw, 4rem);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        footer p {
+            font-family: var(--mono);
+            font-size: 0.7rem;
+            color: var(--text-dim);
+        }
+
+        footer a {
+            color: var(--text);
+            text-decoration: none;
+        }
+
+        footer a:hover { color: var(--green); }
+
+        /* ── RESPONSIVE ──────────────────────────────────── */
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+
+            .audit-panels {
+                grid-template-columns: 1fr;
+            }
+
+            .features-list {
+                grid-template-columns: 1fr;
+            }
+
+            .feat { border-right: none; }
+
+            .step {
+                grid-template-columns: 50px 1fr;
+            }
+
+            footer {
+                flex-direction: column;
+                gap: 0.75rem;
+                text-align: center;
+            }
+
+            .term-body {
+                font-size: 0.62rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ─── NAV ──────────────────────────────────────────── -->
+<nav>
+    <a href="#" class="nav-logo"><span class="wp">wp</span>apps</a>
+    <ul class="nav-links">
+        <li><a href="#problem">Problem</a></li>
+        <li><a href="#how">How</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#code">Code</a></li>
+        <li><a href="#compare">Compare</a></li>
+        <li><a href="https://github.com/InstaWP/wordpress-apps-spec" class="nav-spec">Read the Spec</a></li>
+    </ul>
+</nav>
+
+<!-- ─── HERO ─────────────────────────────────────────── -->
+<section class="hero">
+    <div class="hero-version">Open Specification v0.1.0</div>
+
+    <h1>Stop giving every plugin<br>the <em>keys</em> to <span class="fix">everything.</span></h1>
+
+    <p class="hero-sub">WP Apps is an open spec for sandboxed, permission-scoped extensions. Apps run as isolated services&thinsp;&mdash;&thinsp;zero access to your database, filesystem, or runtime. The Shopify model, for WordPress.</p>
+
+    <div class="hero-actions">
+        <a href="https://github.com/InstaWP/wordpress-apps-spec" class="btn btn-green">Read the Spec &rarr;</a>
+        <a href="#how" class="btn btn-ghost">How It Works</a>
+    </div>
+
+    <div class="arch reveal">
+        <!-- WordPress Site box -->
+        <div class="arch-wp">
+            <div class="arch-wp-label">WordPress Site</div>
+            <div class="arch-wp-inner">
+                <div class="arch-col">
+                    <div class="arch-col-title">WP Core</div>
+                    <div class="arch-item">REST API</div>
+                    <div class="arch-item">Hooks System</div>
+                    <div class="arch-item">Database</div>
+                </div>
+                <div class="arch-col">
+                    <div class="arch-col-title">Apps Runtime <span style="color:var(--text-dim)">(mu-plugin)</span></div>
+                    <div class="arch-item bright">API Gateway</div>
+                    <div class="arch-item bright">Hook Dispatcher</div>
+                    <div class="arch-item warn">Permission Enforcement</div>
+                    <div class="arch-item warn">Audit Logging</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection -->
+        <div class="arch-pipe">
+            <div class="arch-pipe-line"></div>
+            <div class="arch-pipe-label">HTTPS &mdash; Structured Protocol</div>
+            <div class="arch-pipe-line"></div>
+        </div>
+
+        <!-- App nodes -->
+        <div class="arch-apps">
+            <div class="arch-app">
+                <div class="arch-app-arrow">&darr;</div>
+                <div class="arch-app-name">App A</div>
+                <div class="arch-app-env">Cloud</div>
+            </div>
+            <div class="arch-app">
+                <div class="arch-app-arrow">&darr;</div>
+                <div class="arch-app-name">App B</div>
+                <div class="arch-app-env">Container</div>
+            </div>
+            <div class="arch-app">
+                <div class="arch-app-arrow">&darr;</div>
+                <div class="arch-app-name">App C</div>
+                <div class="arch-app-env">Same Server</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── PROBLEM ──────────────────────────────────────── -->
+<section class="problem-full" id="problem">
+    <div class="problem-inner">
+        <div class="reveal">
+            <div class="sect-num">01</div>
+            <div class="sect-label">The Problem</div>
+            <h2 class="sect-title">WordPress plugins run with the keys to the kingdom</h2>
+            <p class="sect-desc">Every plugin gets full, unrestricted access to everything. A single vulnerable plugin compromises the entire site. Here's what that looks like.</p>
+        </div>
+
+        <div class="audit-panels reveal">
+            <!-- PLUGIN AUDIT -->
+            <div class="audit-panel">
+                <div class="audit-header danger">
+                    <span class="status-dot"></span>
+                    Traditional Plugin — Access Audit
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp_users</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp_posts</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp_options</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">$wpdb (raw SQL)</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp-config.php</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">/wp-content/</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">PHP runtime</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">Network (outbound)</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">Other plugins</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">User passwords</span>
+                    <span class="audit-badge badge-full">Full Access</span>
+                </div>
+                <div class="audit-verdict verdict-danger">Verdict: Unrestricted — total surface exposure</div>
+            </div>
+
+            <!-- APP AUDIT -->
+            <div class="audit-panel">
+                <div class="audit-header safe">
+                    <span class="status-dot"></span>
+                    WP App — Access Audit
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp_users</span>
+                    <span class="audit-badge badge-scoped">read:basic</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp_posts</span>
+                    <span class="audit-badge badge-scoped">read, write</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp_options</span>
+                    <span class="audit-badge badge-scoped">prefix_* only</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">$wpdb (raw SQL)</span>
+                    <span class="audit-badge badge-denied">Denied</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">wp-config.php</span>
+                    <span class="audit-badge badge-denied">Denied</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">/wp-content/</span>
+                    <span class="audit-badge badge-denied">Denied</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">PHP runtime</span>
+                    <span class="audit-badge badge-denied">Denied</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">Network (outbound)</span>
+                    <span class="audit-badge badge-scoped">Allowlist only</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">Other plugins</span>
+                    <span class="audit-badge badge-denied">Denied</span>
+                </div>
+                <div class="audit-row">
+                    <span class="audit-resource">User passwords</span>
+                    <span class="audit-badge badge-denied">Denied</span>
+                </div>
+                <div class="audit-verdict verdict-safe">Verdict: Scoped — minimum viable permissions</div>
+            </div>
+        </div>
+
+        <p class="problem-callout reveal">Plugin vulnerabilities are the <strong>#1 attack vector</strong> for WordPress sites. Not because developers are careless&thinsp;&mdash;&thinsp;because the architecture gives every extension the keys to everything.</p>
+    </div>
+</section>
+
+<!-- ─── HOW IT WORKS ─────────────────────────────────── -->
+<section class="sect" id="how">
+    <div class="reveal">
+        <div class="sect-num">02</div>
+        <div class="sect-label">How It Works</div>
+        <h2 class="sect-title">Six ideas borrowed from Shopify, adapted for WordPress</h2>
+        <p class="sect-desc">Apps are external services. They communicate through structured APIs. They get only the permissions they ask for.</p>
+    </div>
+
+    <div class="steps reveal">
+        <div class="step">
+            <div class="step-num"></div>
+            <div class="step-content">
+                <h3>Declare a manifest</h3>
+                <p>Apps ship a <code>wp-app.json</code> that declares identity, permissions, hooks, UI surfaces, and storage. The manifest is the single source of truth.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num"></div>
+            <div class="step-content">
+                <h3>Admin reviews &amp; approves</h3>
+                <p>The site admin sees exactly what the app requests before installation. Granular scopes like <code>posts:read</code> and <code>users:read:basic</code>.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num"></div>
+            <div class="step-content">
+                <h3>OAuth token exchange</h3>
+                <p>The app receives scoped, short-lived access tokens. No database credentials, no filesystem paths, no PHP runtime sharing.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num"></div>
+            <div class="step-content">
+                <h3>API-only communication</h3>
+                <p>Apps interact with WordPress exclusively through a REST API superset under <code>/apps/v1/</code>. Every call is authenticated, scoped, rate-limited, and logged.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num"></div>
+            <div class="step-content">
+                <h3>Hook dispatch over HTTP</h3>
+                <p>WordPress fires hooks to apps via HMAC-signed HTTP requests. Apps can filter content and respond to actions&thinsp;&mdash;&thinsp;without running PHP inside WordPress.</p>
+            </div>
+        </div>
+        <div class="step">
+            <div class="step-num"></div>
+            <div class="step-content">
+                <h3>Structured UI bridge</h3>
+                <p>Apps render admin panels, meta boxes, blocks, and dashboard widgets through a component schema&thinsp;&mdash;&thinsp;or sandboxed iframes with a JS bridge SDK.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ─── FEATURES ─────────────────────────────────────── -->
+<section class="sect" id="features" style="padding-top: 0;">
+    <div class="reveal">
+        <div class="sect-num">03</div>
+        <div class="sect-label">Features</div>
+        <h2 class="sect-title">Everything apps need, nothing they don't</h2>
+    </div>
+
+    <div class="features-list reveal" style="border-top: 1px solid var(--border);">
+        <div class="feat">
+            <div class="feat-marker m-red"></div>
+            <h3>Granular permissions</h3>
+            <p>Scopes follow <code>resource:action:constraint</code> patterns. Apps declare what they need; admins approve exactly that. Never-grantable capabilities protect core secrets.</p>
+        </div>
+        <div class="feat">
+            <div class="feat-marker m-green"></div>
+            <h3>Complete isolation</h3>
+            <p>Apps cannot access other apps' data, WordPress core tables, the filesystem, or execute arbitrary PHP/SQL. Every app is a sandbox.</p>
+        </div>
+        <div class="feat">
+            <div class="feat-marker m-amber"></div>
+            <h3>Hook subscriptions</h3>
+            <p>Subscribe to WordPress actions and filters over HTTP. Sync filters for content modification, async actions for background work. Timeouts and circuit breakers keep things fast.</p>
+        </div>
+        <div class="feat">
+            <div class="feat-marker m-purple"></div>
+            <h3>UI components</h3>
+            <p>A structured component library for admin pages, meta boxes, blocks, and dashboard widgets&thinsp;&mdash;&thinsp;or full iframe mode with the Apps Bridge JS SDK for complex UIs.</p>
+        </div>
+        <div class="feat">
+            <div class="feat-marker m-cyan"></div>
+            <h3>Scoped storage</h3>
+            <p>Declare custom tables, options, post meta, and transients in your manifest. The runtime creates, isolates, and enforces size limits automatically.</p>
+        </div>
+        <div class="feat">
+            <div class="feat-marker m-white"></div>
+            <h3>Full audit log</h3>
+            <p>Every API call, hook dispatch, and data access is logged with app ID, endpoint, method, status, and timing. Complete visibility into what every app does.</p>
+        </div>
+    </div>
+
+    <div class="scopes-bar reveal">
+        <h4>Available Permission Scopes</h4>
+        <div class="scopes-list">
+            <span class="scope">posts:read</span>
+            <span class="scope">posts:write</span>
+            <span class="scope">posts:delete</span>
+            <span class="scope">postmeta:read</span>
+            <span class="scope">postmeta:write</span>
+            <span class="scope">options:read:prefix_*</span>
+            <span class="scope">options:write:prefix_*</span>
+            <span class="scope">users:read:basic</span>
+            <span class="scope">users:read:full</span>
+            <span class="scope">media:read</span>
+            <span class="scope">media:write</span>
+            <span class="scope">comments:read</span>
+            <span class="scope">comments:write</span>
+            <span class="scope">taxonomies:read</span>
+            <span class="scope">taxonomies:write</span>
+            <span class="scope">email:send</span>
+            <span class="scope">cron:register</span>
+            <span class="scope">blocks:register</span>
+            <span class="scope">rest:extend</span>
+            <span class="scope">site:read</span>
+            <span class="scope">themes:read</span>
+        </div>
+    </div>
+</section>
+
+<!-- ─── CODE ─────────────────────────────────────────── -->
+<section class="code-sect" id="code">
+    <div class="sect" style="padding-bottom: 0;">
+        <div class="reveal">
+            <div class="sect-num">04</div>
+            <div class="sect-label">Developer Experience</div>
+            <h2 class="sect-title">Build apps in any language</h2>
+            <p class="sect-desc">Declare everything in a manifest. Handle hooks with a clean SDK. Ship anywhere that serves HTTP.</p>
+        </div>
+    </div>
+
+    <div class="sect reveal" style="padding-top: 2rem;">
+        <div class="code-tabs">
+            <button class="code-tab active" onclick="showTab('manifest')">Manifest</button>
+            <button class="code-tab" onclick="showTab('php')">PHP SDK</button>
+            <button class="code-tab" onclick="showTab('cli')">CLI</button>
+        </div>
+
+        <div class="code-block">
+            <div class="code-block-header">
+                <span class="term-dot r"></span>
+                <span class="term-dot y"></span>
+                <span class="term-dot g"></span>
+                <span class="code-fname" id="code-filename">wp-app.json</span>
+            </div>
+
+            <pre class="code-body active" id="tab-manifest">{
+  <span class="ky">"app"</span>: {
+    <span class="ky">"id"</span>: <span class="s">"com.example.my-seo-app"</span>,
+    <span class="ky">"name"</span>: <span class="s">"My SEO App"</span>,
+    <span class="ky">"version"</span>: <span class="s">"1.0.0"</span>
+  },
+
+  <span class="ky">"permissions"</span>: {
+    <span class="ky">"scopes"</span>: [<span class="s">"posts:read"</span>, <span class="s">"posts:write"</span>, <span class="s">"postmeta:read"</span>]
+  },
+
+  <span class="ky">"hooks"</span>: {
+    <span class="ky">"filters"</span>: [
+      { <span class="ky">"hook"</span>: <span class="s">"the_content"</span>, <span class="ky">"priority"</span>: <span class="n">99</span>, <span class="ky">"timeout_ms"</span>: <span class="n">1000</span> }
+    ],
+    <span class="ky">"actions"</span>: [
+      { <span class="ky">"hook"</span>: <span class="s">"save_post"</span>, <span class="ky">"async"</span>: <span class="n">true</span>, <span class="ky">"timeout_ms"</span>: <span class="n">3000</span> }
+    ]
+  },
+
+  <span class="ky">"surfaces"</span>: {
+    <span class="ky">"meta_boxes"</span>: [
+      { <span class="ky">"id"</span>: <span class="s">"seo-settings"</span>, <span class="ky">"screen"</span>: [<span class="s">"post"</span>, <span class="s">"page"</span>] }
+    ]
+  }
+}</pre>
+
+            <pre class="code-body" id="tab-php"><span class="k">use</span> WPApps\<span class="f">App</span>;
+<span class="k">use</span> WPApps\<span class="f">Request</span>;
+<span class="k">use</span> WPApps\<span class="f">Response</span>;
+
+<span class="v">$app</span> = <span class="k">new</span> <span class="f">App</span>(<span class="s">__DIR__ . '/wp-app.json'</span>);
+
+<span class="c">// Filter: modify post content</span>
+<span class="v">$app</span>-><span class="f">onFilter</span>(<span class="s">'the_content'</span>, <span class="k">function</span> (<span class="f">Request</span> <span class="v">$req</span>): <span class="f">Response</span> {
+    <span class="v">$content</span> = <span class="v">$req</span>->args[<span class="n">0</span>];
+    <span class="v">$content</span> .= <span class="s">'&lt;script type="application/ld+json"&gt;...&lt;/script&gt;'</span>;
+    <span class="k">return</span> <span class="f">Response</span>::<span class="f">filter</span>(<span class="v">$content</span>);
+});
+
+<span class="c">// Action: analyze post on save (async)</span>
+<span class="v">$app</span>-><span class="f">onAction</span>(<span class="s">'save_post'</span>, <span class="k">function</span> (<span class="f">Request</span> <span class="v">$req</span>): <span class="f">Response</span> {
+    <span class="v">$post</span> = <span class="v">$req</span>->api-><span class="f">get</span>(<span class="s">"/apps/v1/posts/{<span class="v">$req</span>->args[0]}"</span>);
+    <span class="v">$score</span> = <span class="f">analyze_seo</span>(<span class="v">$post</span>[<span class="s">'content'</span>]);
+    <span class="v">$req</span>->api-><span class="f">put</span>(<span class="s">"/apps/v1/posts/{<span class="v">$req</span>->args[0]}/meta/_seo_score"</span>, [
+        <span class="s">'value'</span> => <span class="v">$score</span>
+    ]);
+    <span class="k">return</span> <span class="f">Response</span>::<span class="f">ok</span>();
+});
+
+<span class="v">$app</span>-><span class="f">run</span>();</pre>
+
+            <pre class="code-body" id="tab-cli"><span class="c"># Scaffold a new app</span>
+$ <span class="f">wp-apps</span> init my-seo-app --language php
+
+<span class="c"># Validate your manifest</span>
+$ <span class="f">wp-apps</span> validate ./wp-app.json
+<span class="s">  ✓ Manifest valid</span>
+<span class="s">  ✓ 3 scopes declared</span>
+<span class="s">  ✓ 2 hooks registered</span>
+<span class="s">  ✓ 1 surface defined</span>
+
+<span class="c"># Run locally with tunnel to your dev site</span>
+$ <span class="f">wp-apps</span> dev --site https://mysite.com
+  App running at localhost:3000
+  Tunnel: https://abc123.wp-apps.dev
+  <span class="s">Connected to mysite.com ✓</span>
+
+<span class="c"># Deploy</span>
+$ <span class="f">wp-apps</span> deploy --platform instawp
+<span class="s">  ✓ Deployed v1.0.0 to InstaWP Apps Platform</span></pre>
+        </div>
+    </div>
+</section>
+
+<!-- ─── COMPARISON ───────────────────────────────────── -->
+<section class="sect" id="compare">
+    <div class="reveal">
+        <div class="sect-num">05</div>
+        <div class="sect-label">Comparison</div>
+        <h2 class="sect-title">Plugins vs Apps, side by side</h2>
+    </div>
+
+    <div class="comp-wrap reveal">
+        <table class="comp-table">
+            <thead>
+                <tr>
+                    <th>Aspect</th>
+                    <th>Traditional Plugin</th>
+                    <th>WP App</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Execution</td>
+                    <td class="plugin-col">In-process PHP</td>
+                    <td class="app-col">External HTTP service</td>
+                </tr>
+                <tr>
+                    <td>Database</td>
+                    <td class="plugin-col">Full access ($wpdb, any table)</td>
+                    <td class="app-col">Scoped API only</td>
+                </tr>
+                <tr>
+                    <td>Filesystem</td>
+                    <td class="plugin-col">Full (wp-config, core files)</td>
+                    <td class="app-col">None</td>
+                </tr>
+                <tr>
+                    <td>Network</td>
+                    <td class="plugin-col">Unrestricted outbound</td>
+                    <td class="app-col">Declared allowlist</td>
+                </tr>
+                <tr>
+                    <td>Other extensions</td>
+                    <td class="plugin-col">Can read and modify</td>
+                    <td class="app-col">Fully isolated</td>
+                </tr>
+                <tr>
+                    <td>Permissions</td>
+                    <td class="plugin-col">All or nothing</td>
+                    <td class="app-col">Granular scopes</td>
+                </tr>
+                <tr>
+                    <td>Crash impact</td>
+                    <td class="plugin-col">Takes down entire site</td>
+                    <td class="app-col">App fails gracefully</td>
+                </tr>
+                <tr>
+                    <td>Audit trail</td>
+                    <td class="plugin-col">None</td>
+                    <td class="app-col">Full audit log</td>
+                </tr>
+                <tr>
+                    <td>Resource limits</td>
+                    <td class="plugin-col">None</td>
+                    <td class="app-col">Rate limits, timeouts, payload caps</td>
+                </tr>
+                <tr>
+                    <td>Scalability</td>
+                    <td class="plugin-col">Bound to PHP process</td>
+                    <td class="app-col">Independently scalable</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="sameserver reveal">
+        <p><strong>Apps can run on the same server</strong> as WordPress&thinsp;&mdash;&thinsp;as a separate process. Same machine, separate runtime. Co-located apps add just 1&ndash;5ms latency per hook, making them ideal for render-path filters.</p>
+    </div>
+</section>
+
+<!-- ─── CTA ──────────────────────────────────────────── -->
+<section class="cta-sect">
+    <div class="reveal">
+        <div class="sect-label">Get Involved</div>
+        <h2>The spec is open.<br>Build with us.</h2>
+        <p>WP Apps is a living specification. Read it, build on it, contribute to it. The reference implementation is coming from InstaWP.</p>
+        <div class="hero-actions">
+            <a href="https://github.com/InstaWP/wordpress-apps-spec" class="btn btn-green">Read the Full Spec &rarr;</a>
+            <a href="https://github.com/InstaWP/wordpress-apps-spec" class="btn btn-ghost">Contribute on GitHub</a>
+        </div>
+    </div>
+</section>
+
+<!-- ─── FOOTER ───────────────────────────────────────── -->
+<footer>
+    <p>WP Apps Specification v0.1.0 &mdash; MIT License</p>
+    <p>Created by <a href="https://instawp.com">InstaWP</a></p>
+</footer>
+
+<!-- ─── SCRIPTS ──────────────────────────────────────── -->
+<script>
+    // Tab switching
+    function showTab(name) {
+        document.querySelectorAll('.code-body').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.code-tab').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+        const fnames = { manifest: 'wp-app.json', php: 'index.php', cli: 'terminal' };
+        document.getElementById('code-filename').textContent = fnames[name];
+    }
+
+    // Scroll reveal
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            const t = document.querySelector(a.getAttribute('href'));
+            if (t) t.scrollIntoView({ behavior: 'smooth' });
+        });
+    });
+</script>
+
+</body>
+</html>

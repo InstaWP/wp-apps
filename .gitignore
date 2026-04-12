@@ -1,0 +1,22 @@
+# Dependencies
+runtime/vendor/
+sdk/vendor/
+node_modules/
+
+# App data
+sdk/examples/contact-form/data/
+sdk/example/.wp-apps-tokens/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
