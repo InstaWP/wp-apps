@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  runtime:
+    name: Runtime (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json, curl, openssl, mbstring
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+        working-directory: runtime
+
+      - name: PHP syntax check
+        run: find src -name "*.php" -exec php -l {} \;
+        working-directory: runtime
+
+  sdk:
+    name: SDK (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: json, curl
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+        working-directory: sdk
+
+      - name: PHP syntax check
+        run: find src -name "*.php" -exec php -l {} \;
+        working-directory: sdk
+
+  release:
+    name: Build release zips
+    runs-on: ubuntu-latest
+    needs: [runtime, sdk]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: json, curl, openssl, mbstring
+
+      - name: Build runtime zip
+        run: |
+          cd runtime
+          composer install --no-dev --no-interaction --optimize-autoloader
+          cd ..
+          mkdir -p dist/wp-apps-runtime
+          cp runtime/wp-apps-runtime.php dist/wp-apps-runtime/
+          cp runtime/composer.json dist/wp-apps-runtime/
+          cp -r runtime/src dist/wp-apps-runtime/
+          cp -r runtime/assets dist/wp-apps-runtime/
+          cp -r runtime/vendor dist/wp-apps-runtime/
+          cd dist && zip -r ../wp-apps-runtime.zip wp-apps-runtime/
+
+      - name: Build SDK zip
+        run: |
+          mkdir -p dist/wp-apps-sdk
+          cp sdk/composer.json dist/wp-apps-sdk/
+          cp -r sdk/src dist/wp-apps-sdk/
+          cp -r sdk/example dist/wp-apps-sdk/
+          cp -r sdk/examples dist/wp-apps-sdk/
+          rm -rf dist/wp-apps-sdk/examples/contact-form/data
+          cd dist && zip -r ../wp-apps-sdk.zip wp-apps-sdk/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-zips
+          path: |
+            wp-apps-runtime.zip
+            wp-apps-sdk.zip
