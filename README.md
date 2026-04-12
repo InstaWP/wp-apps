@@ -4,11 +4,7 @@
 
 Apps run as isolated external HTTP services — zero access to your database, filesystem, or PHP runtime. The Shopify model, for WordPress.
 
-https://github.com/user-attachments/assets/wp-apps-demo.mp4
-
-<video src="docs/wp-apps-demo.mp4" controls width="100%"></video>
-
-> If it's a service, it's an app. If it's infrastructure, it's a plugin.
+https://github.com/user-attachments/assets/a820f80e-ac0f-4744-8c8e-3d41fb4932a3
 
 ## Why
 
