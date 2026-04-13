@@ -17,7 +17,7 @@
     },
 
     "runtime": {
-        "endpoint": "https://contact-form-app.nbg1-2.instapods.app",
+        "endpoint": "http://localhost:8002",
         "health_check": "/health",
         "auth_callback": "/auth/callback",
         "webhook_path": "/hooks",

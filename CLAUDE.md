@@ -39,9 +39,9 @@ sdk/                             — PHP SDK for building apps
     Auth/                        — TokenStore, HmacValidator
 
 sdk/examples/                    — Example apps
-  reading-time/                  — Simplest app: event → post meta → block (~50 lines)
-  contact-form/                  — Full app: block + form submission + admin panel
-sdk/example/                     — Hello App (legacy, uses the_content filter)
+  hello-app/                     — Minimal app: event webhook + health (~10 lines)
+  reading-time/                  — Data-first loop: event → post meta → block (~50 lines)
+  contact-form/                  — Full app: block + form submission + admin panel (~150 lines)
 
 docs/                            — Developer documentation (7 files)
 docs/screenshots/                — Screenshots of admin UI, apps, landing page

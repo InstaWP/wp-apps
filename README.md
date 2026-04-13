@@ -74,7 +74,7 @@ $app->run();
 |-----|---------------------|-------|
 | [Reading Time](sdk/examples/reading-time/) | Event → post meta → block (the complete data-first loop) | ~50 |
 | [Contact Form](sdk/examples/contact-form/) | Block + form submission + app-side storage + admin panel | ~150 |
-| [Hello App](sdk/example/) | `the_content` filter (Tier 2 escape hatch — legacy pattern) | ~30 |
+| [Hello App](sdk/examples/hello-app/) | Minimal app — event webhook + health check | ~10 |
 
 ![Apps admin panel](docs/screenshots/admin-apps-list.png)
 

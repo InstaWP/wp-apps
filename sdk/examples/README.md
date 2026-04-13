@@ -1,90 +1,87 @@
 # WP Apps — Example Apps
 
-Three example apps that demonstrate different integration patterns. Each is a complete, working app you can deploy and install on any WordPress site running the WP Apps Runtime.
+Three example apps, from simplest to most complete. Each demonstrates different integration patterns.
 
-## Contact Form
+## Hello App
 
-A contact form app with submissions management. Demonstrates blocks, app-side storage, and admin surfaces.
+The absolute minimum WP App. ~10 lines of logic.
 
-**Patterns used:** Block (cached) + form submission to app endpoint + app-side JSON storage + admin iframe
-
-![Contact Form on frontend](../../docs/screenshots/contact-form-frontend.png)
-
-![Contact Form admin panel](../../docs/screenshots/contact-form-admin.png)
-
-**How it works:**
-1. App registers a `wpapps/contact-form` block (+ `[wpapps-contact-form]` shortcode fallback)
-2. Admin places the block on a page via the block editor (or shortcode in Elementor/Divi)
-3. Block HTML is rendered once by the app and cached — zero app calls on subsequent page loads
-4. Form submissions POST directly to the app's `/submit` endpoint
-5. App stores submissions in its own database (JSON file)
-6. Admin views submissions at the app's `/admin` endpoint
-
-**Files:**
-- [`contact-form/wp-app.json`](contact-form/wp-app.json) — Manifest
-- [`contact-form/index.php`](contact-form/index.php) — App logic (~150 lines)
-
-**Deploy:**
 ```bash
-instapods deploy contact-form-app --local ../sdk --preset php
+cd hello-app && php -S localhost:8001 index.php
 ```
+
+**What it does:** Logs when a post is saved (async event webhook).
+
+**Patterns:** Event webhook only. No blocks, no UI, no storage. Just "hello, a post was saved."
+
+**Files:** [`hello-app/`](hello-app/)
 
 ---
 
 ## Reading Time
 
-The simplest possible WP App. Calculates and displays reading time for posts in ~50 lines. Demonstrates the complete data-first loop.
+The simplest *useful* app. ~50 lines of logic.
 
-**Patterns used:** Event webhook (async) + post meta + block (cached)
-
-**How it works:**
-1. Event: `save_post` fires → app calculates word count and reading time
-2. App writes `reading_time` and `word_count` to post meta via API
-3. Block: displays a "X min read" badge, cached for 24 hours
-4. Zero page-load cost — data is pre-computed at save time, block is cached
-
-**Files:**
-- [`reading-time/wp-app.json`](reading-time/wp-app.json) — Manifest
-- [`reading-time/index.php`](reading-time/index.php) — App logic (~50 lines of actual code)
-
-**Deploy:**
 ```bash
-instapods deploy reading-time-app --local ../sdk --preset php
+cd reading-time && php -S localhost:8003 index.php
 ```
 
----
+**What it does:**
+1. Event: `save_post` → counts words → writes `reading_time` and `word_count` to post meta
+2. Block: displays a "X min read" badge (cached for 24hr)
 
-## Hello App
+**Patterns:** Event webhook → post meta → block (the complete data-first loop)
 
-A minimal demo that appends a greeting to post content. Uses a `the_content` filter (Tier 2 — escape hatch pattern, not recommended for new apps).
-
-**Patterns used:** `the_content` filter (Tier 2 — discouraged, prefer blocks)
-
-**Files:**
-- [`../example/wp-app.json`](../example/wp-app.json) — Manifest
-- [`../example/index.php`](../example/index.php) — App logic
-
-> **Note:** This app exists for backwards compatibility testing. New apps should use blocks and event webhooks instead of content filters. See Reading Time and Contact Form for the recommended patterns.
+**Files:** [`reading-time/`](reading-time/)
 
 ---
 
-## WP Admin — Apps Management
+## Contact Form
 
-The runtime adds an **Apps** menu to the WordPress admin sidebar where you can install, activate, deactivate, and uninstall apps.
+A full-featured app. ~150 lines of logic.
 
-![Apps list in WP Admin](../../docs/screenshots/admin-apps-list.png)
+```bash
+cd contact-form && php -S localhost:8002 index.php
+```
 
-![Install new app](../../docs/screenshots/admin-install-app.png)
+**What it does:**
+1. Block: renders a contact form (cached, zero page-load cost)
+2. Form submissions POST to the app's `/submit` endpoint
+3. App stores submissions in its own database (JSON file)
+4. Admin panel at `/admin` shows all submissions
+
+**Patterns:** Block (cached) + app endpoint + app-side storage + admin surface
+
+![Contact Form on frontend](../../docs/screenshots/contact-form-frontend.png)
+
+![Contact Form admin panel](../../docs/screenshots/contact-form-admin.png)
+
+**Files:** [`contact-form/`](contact-form/)
 
 ---
 
 ## Integration Patterns Summary
 
-| Pattern | Page-load cost | When to use | Example app |
+| Pattern | Page-load cost | When to use | Example |
 |---------|:---:|---|---|
 | Event webhook → post meta | Zero | React to content changes | Reading Time |
-| Block (cached) | Zero after first render | Frontend UI components | Contact Form, Reading Time |
-| Shortcode (fallback) | Zero after first render | Elementor, Divi, Classic Editor | Contact Form |
+| Block (cached) | Zero after first render | Frontend UI | Contact Form, Reading Time |
+| Shortcode fallback | Zero after first render | Elementor, Divi, Classic Editor | Contact Form |
 | App-side storage | Zero | Submissions, subscribers, analytics | Contact Form |
-| Admin iframe surface | Zero (admin only) | Dashboard, settings, data views | Contact Form |
-| `the_content` filter | **HTTP call per page** | Last resort only | Hello App (legacy) |
+| Admin surface (iframe) | Zero (admin only) | Dashboards, settings, data views | Contact Form |
+
+## Running Locally
+
+All examples use `localhost` endpoints in their manifests. To develop:
+
+```bash
+# 1. Pick an app and start it
+cd reading-time && php -S localhost:8003 index.php
+
+# 2. Install on your WordPress site
+# WP Admin → Apps → Install New → http://localhost:8003/wp-app.json
+
+# 3. The app is now connected. Save a post to trigger the event webhook.
+```
+
+For remote WordPress sites, expose your local server via a tunnel (ngrok, Cloudflare Tunnel, etc.) and update the `endpoint` in `wp-app.json` to the tunnel URL.

@@ -20,6 +20,8 @@ use WPApps\SDK\Request;
 use WPApps\SDK\Response;
 
 $app = new App(__DIR__ . '/wp-app.json');
+$manifest = json_decode(file_get_contents(__DIR__ . '/wp-app.json'), true);
+$appEndpoint = rtrim($manifest['runtime']['endpoint'], '/');
 
 // ─── Storage (JSON file) ────────────────────────────────────────
 $dataFile = __DIR__ . '/data/submissions.json';
@@ -46,7 +48,7 @@ function addSubmission(string $file, array $entry): int {
 
 // ─── Block: Contact Form (Tier 1 — cached, zero page-load cost) ─
 $app->onBlock('wpapps/contact-form', function (Request $req): Response {
-    $appEndpoint = 'https://contact-form-app.nbg1-2.instapods.app';
+    global $appEndpoint;
 
     $html = <<<HTML
 <div id="wpapps-contact-form" style="max-width:560px;margin:2rem 0;">

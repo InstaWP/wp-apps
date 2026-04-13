@@ -15,7 +15,7 @@
     },
 
     "runtime": {
-        "endpoint": "https://reading-time-app.nbg1-2.instapods.app",
+        "endpoint": "http://localhost:8003",
         "health_check": "/health",
         "auth_callback": "/auth/callback",
         "webhook_path": "/hooks",
