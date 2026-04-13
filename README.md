@@ -35,38 +35,115 @@ WordPress Site                          App Server
 
 ## Quick Start
 
-**1. Install the runtime** on your WordPress site ([download zip](https://github.com/InstaWP/wp-apps/releases))
+Build a working app in 3 files:
 
-**2. Create an app** with the PHP SDK:
+### 1. Install the runtime
+
+[Download the plugin zip](https://github.com/InstaWP/wp-apps/releases) and install via **WP Admin → Plugins → Add New → Upload Plugin**.
+
+### 2. Create your app
+
+**`wp-app.json`** — declare what your app does:
+
+```json
+{
+  "app": {
+    "id": "com.example.my-app",
+    "name": "My First App",
+    "version": "1.0.0",
+    "description": "Calculates reading time for posts.",
+    "author": { "name": "Your Name" },
+    "license": "MIT"
+  },
+  "runtime": {
+    "endpoint": "http://localhost:8001",
+    "health_check": "/health",
+    "auth_callback": "/auth/callback",
+    "webhook_path": "/hooks"
+  },
+  "permissions": {
+    "scopes": ["posts:read", "postmeta:write"]
+  },
+  "hooks": {
+    "events": [
+      { "event": "save_post", "description": "Calculate reading time" }
+    ]
+  },
+  "surfaces": {
+    "blocks": [
+      { "name": "my-app/reading-time", "title": "Reading Time", "cache_ttl": 86400 }
+    ]
+  }
+}
+```
+
+**`composer.json`** — require the SDK:
+
+```json
+{
+  "require": { "instawp/wp-apps-sdk-php": "^0.1" },
+  "autoload": { "psr-4": { "MyApp\\": "src/" } }
+}
+```
+
+**`index.php`** — handle events and render blocks:
 
 ```php
+<?php
+require_once __DIR__ . '/vendor/autoload.php';
+
 use WPApps\SDK\App;
 use WPApps\SDK\Request;
 use WPApps\SDK\Response;
 
 $app = new App(__DIR__ . '/wp-app.json');
 
-// Event: runs async when a post is saved (zero page-load cost)
+// Event: fires async when a post is saved. Never blocks page loads.
 $app->onEvent('save_post', function (Request $req): Response {
-    $post = $req->api->get("/apps/v1/posts/{$req->args[0]}");
-    $wordCount = str_word_count(strip_tags($post['content']['rendered']));
-    $req->api->put("/apps/v1/posts/{$req->args[0]}/meta/reading_time", [
-        'value' => max(1, (int) ceil($wordCount / 238))
+    $postId = $req->args[0];
+    $post = $req->api->get("/apps/v1/posts/{$postId}");
+
+    $words = str_word_count(strip_tags($post['content']['rendered'] ?? ''));
+    $minutes = max(1, (int) ceil($words / 238));
+
+    // Write to post meta — WordPress caches and serves this
+    $req->api->put("/apps/v1/posts/{$postId}/meta/reading_time", [
+        'value' => $minutes
     ]);
+
     return Response::ok();
 });
 
-// Block: cached HTML, served from WP cache on every page load
+// Block: rendered once, cached for 24hrs. Zero cost on page loads.
 $app->onBlock('my-app/reading-time', function (Request $req): Response {
-    return Response::block('<span>5 min read</span>');
+    $postId = $req->context['post_id'] ?? 0;
+    $meta = $req->api->get("/apps/v1/posts/{$postId}/meta");
+
+    $minutes = 1;
+    foreach ($meta ?? [] as $key => $value) {
+        if (str_ends_with($key, '_reading_time')) $minutes = (int) $value;
+    }
+
+    return Response::block(
+        "<span style='color:#666;font-size:14px;'>📖 {$minutes} min read</span>"
+    );
 });
 
 $app->run();
 ```
 
-**3. Deploy anywhere** that serves HTTP — cloud, container, serverless, or same server.
+### 3. Run it
 
-**4. Install via WP Admin** → Apps → Install New → enter your app's manifest URL.
+```bash
+composer install
+php -S localhost:8001 index.php
+```
+
+### 4. Install on WordPress
+
+**WP Admin → Apps → Install New** → enter `http://localhost:8001/wp-app.json` → review permissions → approve.
+
+Your app is live. Save a post to trigger the reading time calculation. Add the "Reading Time" block to any page via the block editor (or use `[my-app-reading-time]` shortcode in Elementor/Divi).
 
 ## Example Apps
 
