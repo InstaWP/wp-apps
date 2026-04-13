@@ -185,13 +185,24 @@
 
     <div class="install-help">
         <h2>How to install</h2>
-        <ol>
-            <li>Install the <a href="https://github.com/InstaWP/wp-apps/releases" style="color:var(--green);">WP Apps Runtime</a> plugin on your WordPress site</li>
+        <p style="margin-bottom:1rem;"><strong>Step 1:</strong> Install the <a href="https://github.com/InstaWP/wp-apps/releases" style="color:var(--green);">WP Apps Runtime</a> on your WordPress site:</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);margin-bottom:1.5rem;">
+            <div style="background:var(--bg);padding:1rem 1.25rem;">
+                <div style="font-family:var(--mono);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:0.5rem;">As a plugin (easy)</div>
+                <p style="font-size:0.85rem;color:var(--text);">Download <code>wp-apps-runtime.zip</code> from the release page. Go to <strong>WP Admin &rarr; Plugins &rarr; Add New &rarr; Upload Plugin</strong> and upload the zip.</p>
+            </div>
+            <div style="background:var(--bg);padding:1rem 1.25rem;">
+                <div style="font-family:var(--mono);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-dim);margin-bottom:0.5rem;">As a mu-plugin (recommended for production)</div>
+                <p style="font-size:0.85rem;color:var(--text);">Extract and copy the <code>wp-apps-runtime/</code> folder into <code>wp-content/mu-plugins/</code>. Add a loader file — see the <a href="https://github.com/InstaWP/wp-apps/blob/main/docs/getting-started.md" style="color:var(--green);">getting started guide</a>.</p>
+            </div>
+        </div>
+        <p><strong>Step 2:</strong> Install an app:</p>
+        <ol style="margin-top:0.5rem;">
             <li>Go to <strong>WP Admin &rarr; Apps &rarr; Install New</strong></li>
             <li>Paste the app's manifest URL and click <strong>Fetch &amp; Review</strong></li>
             <li>Review the requested permissions and click <strong>Approve &amp; Install</strong></li>
         </ol>
-        <p style="margin-top:1rem;">Or click <strong>Copy Manifest URL</strong> above and paste it directly into the install page.</p>
+        <p style="margin-top:1rem;">Click <strong>Copy Manifest URL</strong> above to copy it to your clipboard.</p>
     </div>
 </div>
 
