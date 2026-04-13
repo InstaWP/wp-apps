@@ -140,21 +140,24 @@ class BlockManager
         // Build cache key
         $cacheKey = $this->buildCacheKey($app['app_id'], $blockName, $postId, $attributes);
 
+        // Block wrapper ensures proper alignment within the theme's content column
+        $wrapper = get_block_wrapper_attributes();
+
         // Check cache
         $cached = get_transient($cacheKey);
         if ($cached !== false) {
-            return $cached;
+            return "<div {$wrapper}>{$cached}</div>";
         }
 
         // Call app to render
         $html = $this->fetchFromApp($app, $blockName, $attributes, $postId);
 
-        // Cache the result
+        // Cache the result (raw HTML without wrapper — wrapper may change between themes)
         if ($html !== '' && $cacheTtl > 0) {
             set_transient($cacheKey, $html, $cacheTtl);
         }
 
-        return $html;
+        return "<div {$wrapper}>{$html}</div>";
     }
 
     /**
