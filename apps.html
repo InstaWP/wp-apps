@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apps — WP Apps</title>
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #080808;
+            --bg-surface: #0e0e0e;
+            --bg-raised: #141414;
+            --bg-inset: #0a0a0a;
+            --border: #1e1e1e;
+            --border-strong: #2a2a2a;
+            --text: #c8c8c8;
+            --text-dim: #666;
+            --white: #f5f5f5;
+            --green: #00ff88;
+            --green-dim: #003d20;
+            --green-glow: rgba(0, 255, 136, 0.1);
+            --mono: 'Menlo', 'Consolas', 'SF Mono', 'Liberation Mono', monospace;
+            --serif: 'Georgia', 'Times New Roman', 'Palatino Linotype', serif;
+            --sans: system-ui, -apple-system, 'Segoe UI', 'Helvetica Neue', sans-serif;
+        }
+
+        html { scroll-behavior: smooth; }
+        body { font-family: var(--sans); background: var(--bg); color: var(--text); line-height: 1.65; -webkit-font-smoothing: antialiased; }
+
+        body::after { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 9999; opacity: 0.025; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-repeat: repeat; background-size: 256px; }
+
+        nav { position: fixed; top: 0; width: 100%; z-index: 1000; padding: 0 clamp(1.5rem, 4vw, 4rem); height: 56px; display: flex; justify-content: space-between; align-items: center; background: rgba(8,8,8,0.9); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+        .nav-logo { font-family: var(--mono); font-size: 0.9rem; font-weight: 700; color: var(--white); text-decoration: none; letter-spacing: -0.02em; }
+        .nav-logo .wp { color: var(--green); }
+        .nav-links { display: flex; align-items: center; gap: 1.75rem; list-style: none; }
+        .nav-links a { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); text-decoration: none; text-transform: uppercase; letter-spacing: 0.08em; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--white); }
+        .nav-links .active { color: var(--green) !important; }
+        .nav-spec { padding: 0.4rem 1rem; border: 1px solid var(--border-strong); color: var(--text) !important; transition: all 0.2s; }
+        .nav-spec:hover { border-color: var(--green); color: var(--green) !important; }
+
+        .page { max-width: 1000px; margin: 0 auto; padding: clamp(7rem, 12vh, 9rem) clamp(1.5rem, 4vw, 4rem) 4rem; }
+
+        .page h1 { font-family: var(--serif); font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 400; color: var(--white); letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+        .page .subtitle { color: var(--text-dim); font-size: 1.1rem; max-width: 600px; margin-bottom: 3rem; }
+
+        .apps-grid { display: flex; flex-direction: column; gap: 2px; background: var(--border); border: 1px solid var(--border); }
+
+        .app-card { background: var(--bg); padding: 2rem 2.5rem; display: grid; grid-template-columns: 1fr auto; gap: 2rem; align-items: start; transition: background 0.2s; }
+        .app-card:hover { background: var(--bg-surface); }
+
+        .app-info { }
+        .app-name { font-family: var(--serif); font-size: 1.35rem; font-weight: 400; color: var(--white); margin-bottom: 0.3rem; }
+        .app-id { font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); margin-bottom: 0.75rem; }
+        .app-desc { font-size: 0.92rem; color: var(--text); margin-bottom: 1rem; line-height: 1.6; }
+
+        .app-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 1rem; }
+        .tag { font-family: var(--mono); font-size: 0.68rem; padding: 0.25rem 0.6rem; background: var(--bg-inset); border: 1px solid var(--border); color: var(--text-dim); }
+        .tag.tag-event { border-color: var(--green-dim); color: var(--green); }
+        .tag.tag-block { border-color: #1a3d66; color: #60a5fa; }
+        .tag.tag-storage { border-color: #3d3d1a; color: #e5a00d; }
+        .tag.tag-admin { border-color: #3d1a3d; color: #c084fc; }
+
+        .app-meta { font-family: var(--mono); font-size: 0.72rem; color: var(--text-dim); display: flex; gap: 1.5rem; }
+
+        .app-actions { display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-end; padding-top: 0.25rem; }
+
+        .btn-install { font-family: var(--mono); font-size: 0.72rem; padding: 0.6rem 1.25rem; background: var(--green); color: #000; border: none; cursor: pointer; text-decoration: none; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; transition: all 0.2s; white-space: nowrap; }
+        .btn-install:hover { box-shadow: 0 0 20px rgba(0,255,136,0.2); }
+
+        .btn-source { font-family: var(--mono); font-size: 0.72rem; padding: 0.5rem 1.25rem; background: transparent; color: var(--text-dim); border: 1px solid var(--border); cursor: pointer; text-decoration: none; text-transform: uppercase; letter-spacing: 0.06em; transition: all 0.2s; white-space: nowrap; }
+        .btn-source:hover { border-color: var(--text); color: var(--white); }
+
+        .install-help { margin-top: 3rem; padding: 2rem 2.5rem; border: 1px solid var(--border); background: var(--bg-surface); }
+        .install-help h2 { font-family: var(--serif); font-size: 1.2rem; font-weight: 400; color: var(--white); margin-bottom: 1rem; }
+        .install-help p { font-size: 0.9rem; color: var(--text-dim); margin-bottom: 0.5rem; }
+        .install-help code { font-family: var(--mono); font-size: 0.82rem; color: var(--green); background: var(--green-glow); padding: 0.15rem 0.5rem; }
+        .install-help ol { padding-left: 1.5rem; margin-top: 1rem; }
+        .install-help li { font-size: 0.9rem; color: var(--text); margin-bottom: 0.5rem; }
+
+        .manifest-url { font-family: var(--mono); font-size: 0.75rem; color: var(--green); background: var(--bg-inset); border: 1px solid var(--border); padding: 0.5rem 0.75rem; display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; transition: all 0.2s; user-select: all; }
+        .manifest-url:hover { border-color: var(--green); }
+
+        footer { padding: 2.5rem clamp(1.5rem, 4vw, 4rem); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; max-width: 1000px; margin: 0 auto; }
+        footer p { font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim); }
+        footer a { color: var(--text); text-decoration: none; }
+        footer a:hover { color: var(--green); }
+
+        @media (max-width: 768px) {
+            .nav-links { display: none; }
+            .app-card { grid-template-columns: 1fr; gap: 1rem; }
+            .app-actions { flex-direction: row; align-items: center; }
+            footer { flex-direction: column; gap: 0.75rem; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-logo"><span class="wp">wp</span>apps</a>
+    <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/apps.html" class="active">Apps</a></li>
+        <li><a href="https://github.com/InstaWP/wp-apps/blob/main/docs/getting-started.md">Docs</a></li>
+        <li><a href="https://github.com/InstaWP/wp-apps" class="nav-spec">GitHub</a></li>
+    </ul>
+</nav>
+
+<div class="page">
+    <h1>Sample Apps</h1>
+    <p class="subtitle">Working example apps you can install on any WordPress site running the WP Apps Runtime. Open source, ready to deploy.</p>
+
+    <div class="apps-grid">
+
+        <!-- Contact Form -->
+        <div class="app-card">
+            <div class="app-info">
+                <div class="app-name">Contact Form</div>
+                <div class="app-id">com.wpapps.contact-form</div>
+                <div class="app-desc">A contact form with submissions management. Renders as a Gutenberg block (or shortcode for Elementor/Divi). Submissions stored in the app's own database with an admin panel to view them.</div>
+                <div class="app-tags">
+                    <span class="tag tag-block">Block</span>
+                    <span class="tag tag-storage">App-side storage</span>
+                    <span class="tag tag-admin">Admin panel</span>
+                    <span class="tag">Shortcode fallback</span>
+                </div>
+                <div class="app-meta">
+                    <span>v1.0.0</span>
+                    <span>~150 lines</span>
+                    <span>Scopes: posts:read, site:read</span>
+                </div>
+            </div>
+            <div class="app-actions">
+                <a href="https://contact-form-app.nbg1-2.instapods.app/wp-app.json" class="btn-install" onclick="copyManifest(event, 'https://contact-form-app.nbg1-2.instapods.app/wp-app.json')">Copy Manifest URL</a>
+                <a href="https://github.com/InstaWP/wp-apps/tree/main/sdk/examples/contact-form" class="btn-source">View Source</a>
+            </div>
+        </div>
+
+        <!-- Reading Time -->
+        <div class="app-card">
+            <div class="app-info">
+                <div class="app-name">Reading Time</div>
+                <div class="app-id">com.wpapps.reading-time</div>
+                <div class="app-desc">Calculates and displays reading time for posts. Demonstrates the complete data-first loop: event webhook computes word count on save, writes to post meta, block displays a cached "X min read" badge.</div>
+                <div class="app-tags">
+                    <span class="tag tag-event">Event webhook</span>
+                    <span class="tag tag-block">Block</span>
+                    <span class="tag">Post meta</span>
+                </div>
+                <div class="app-meta">
+                    <span>v1.0.0</span>
+                    <span>~50 lines</span>
+                    <span>Scopes: posts:read, postmeta:read, postmeta:write</span>
+                </div>
+            </div>
+            <div class="app-actions">
+                <a href="https://reading-time-app.nbg1-2.instapods.app/wp-app.json" class="btn-install" onclick="copyManifest(event, 'https://reading-time-app.nbg1-2.instapods.app/wp-app.json')">Copy Manifest URL</a>
+                <a href="https://github.com/InstaWP/wp-apps/tree/main/sdk/examples/reading-time" class="btn-source">View Source</a>
+            </div>
+        </div>
+
+        <!-- Hello App -->
+        <div class="app-card">
+            <div class="app-info">
+                <div class="app-name">Hello App</div>
+                <div class="app-id">com.wpapps.hello-app</div>
+                <div class="app-desc">The absolute minimum WP App. Logs when a post is saved via an async event webhook. ~10 lines of actual logic. The best starting point for learning.</div>
+                <div class="app-tags">
+                    <span class="tag tag-event">Event webhook</span>
+                </div>
+                <div class="app-meta">
+                    <span>v1.0.0</span>
+                    <span>~10 lines</span>
+                    <span>Scopes: posts:read</span>
+                </div>
+            </div>
+            <div class="app-actions">
+                <a href="https://hello-app.nbg1-2.instapods.app/wp-app.json" class="btn-install" onclick="copyManifest(event, 'https://hello-app.nbg1-2.instapods.app/wp-app.json')">Copy Manifest URL</a>
+                <a href="https://github.com/InstaWP/wp-apps/tree/main/sdk/examples/hello-app" class="btn-source">View Source</a>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="install-help">
+        <h2>How to install</h2>
+        <ol>
+            <li>Install the <a href="https://github.com/InstaWP/wp-apps/releases" style="color:var(--green);">WP Apps Runtime</a> plugin on your WordPress site</li>
+            <li>Go to <strong>WP Admin &rarr; Apps &rarr; Install New</strong></li>
+            <li>Paste the app's manifest URL and click <strong>Fetch &amp; Review</strong></li>
+            <li>Review the requested permissions and click <strong>Approve &amp; Install</strong></li>
+        </ol>
+        <p style="margin-top:1rem;">Or click <strong>Copy Manifest URL</strong> above and paste it directly into the install page.</p>
+    </div>
+</div>
+
+<footer>
+    <p>WP Apps v0.0.1 &mdash; MIT License</p>
+    <p>Created by <a href="https://instawp.com">InstaWP</a></p>
+</footer>
+
+<script>
+function copyManifest(e, url) {
+    e.preventDefault();
+    navigator.clipboard.writeText(url).then(function() {
+        var btn = e.target;
+        var original = btn.textContent;
+        btn.textContent = 'Copied!';
+        btn.style.background = '#003d20';
+        btn.style.color = '#00ff88';
+        setTimeout(function() {
+            btn.textContent = original;
+            btn.style.background = '';
+            btn.style.color = '';
+        }, 2000);
+    });
+}
+</script>
+
+</body>
+</html>
