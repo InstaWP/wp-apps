@@ -97,6 +97,7 @@ Apps **cannot** access:
 - [Integration Model](docs/integration-model.md) (Tier 1 vs Tier 2)
 - [Security](docs/security.md) (OAuth, HMAC, permissions)
 - [Apps vs Plugins](docs/apps-vs-plugins.md) (when to build which)
+- [FAQ](docs/faq.md) (hosting, performance, security, comparisons)
 - [Specification](SPEC.md) (full spec)
 
 ## Links
